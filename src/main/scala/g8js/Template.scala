@@ -12,7 +12,7 @@ object Formatter {
   def hyphenate(s: String) = s.replaceAll("\\s+", "-")
   def normalize(s: String) = hyphenate(s.toLowerCase)
   def snakeCase(s: String) = s.replaceAll("""[\s\.\-]+""", "_")
-  def packageDir(s: String) = s.replace(".", "/")
+  def packageDir(s: String) = s.replace(".", Path.sep)
   def addRandomId(s: String) = s + "-" + scala.util.Random.alphanumeric.take(32).mkString
 
   def apply(from: String, format: String): String = {
@@ -42,7 +42,9 @@ object Template {
   val FormatArgs = "format=\"([\\w,\\-]+)\"".r
 
   def expandPathPattern(path: String): String =
-    path.replaceAll("""\$(\w+)__([\w,]+)\$""", """\$$1;format="$2"\$""")
+    path
+      .replaceAllLiterally("""$package$""", "$package;format=\"packaged\"$")
+      .replaceAll("""\$(\w+)__([\w,]+)\$""", """\$$1;format="$2"\$""")
 
   def replace(key: String, context: Context): String =
     context.getOrElse(key, key)

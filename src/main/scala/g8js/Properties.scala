@@ -19,9 +19,14 @@ case class Properties(keyValues: js.Array[Pair]) {
     this
   }
 
-  def resolve(params: Map[String, String]): this.type = {
-    // Fill & mutate with params
+  def mergeAndReport(params: Map[String, String]): Seq[String] = {
+    // Update props with params
     params.foreach { case (k, v) => set(k, v) }
+    // Report back what else need to fill
+    keyValues.map(_._1) diff params.keys.toSeq
+  }
+
+  def resolve(): this.type = {
     // Substitute
     val ctx = keyValues.toMap
     keyValues.indices.foreach { i =>
