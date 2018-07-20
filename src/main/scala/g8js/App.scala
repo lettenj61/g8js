@@ -186,7 +186,10 @@ trait Operations {
         .get("name")
         .map(Formatter.normalize(_))
         .getOrElse {
-          throw new IllegalArgumentException("Error: 'name' property must not be empty.")
+          val generated = Formatter.addRandomId("g8js")
+          console.warn("No 'name' property specified. Generating randomly: " + generated)
+          props.set("name", generated)
+          generated
         }
       val targetRoot = config.out
         .map(normalizePath)
