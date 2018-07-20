@@ -15,6 +15,7 @@ import io.scalajs.nodejs.readline._
 
 case class Config(
   repo: String = "",
+  host: String = "github.com",
   out: Option[String] = None,
   params: Map[String, String] = Map(),
   noGenerate: Boolean = false,
@@ -41,12 +42,12 @@ trait Operations {
 
   def gitClone(config: Config, cacheDir: String): Try[String] = Try {
     val Array(user, repo) = config.repo.split("/", 2)
-    val url = s"https://github.com/$user/$repo"
-    val cache = Path.join(cacheDir, repo)
+    val url = s"https://${config.host}/$user/$repo"
+    val cache = Path.normalize(Path.join(cacheDir, s"${config.host}/${config.repo}"))
     if (Fs.existsSync(cache)) cache
     else {
       // This is defined in NodeJSExtensions, not ScalaJS.io facade
-      ChildProcess.execSync(s"git clone $url $repo", new ExecOptions(cwd = cacheDir))
+      ChildProcess.execSync(s"git clone $url $cache", new ExecOptions(cwd = cacheDir))
       cache
     }
   }
@@ -330,7 +331,13 @@ object App extends Operations { self =>
       .action { (repo, config) => config.copy(repo = repo) }
       .text("github user/repo")
 
+    opt[String]('H', "host")
+      .valueName("[hostname]")
+      .action { (host, config) => config.copy(host = host) }
+      .text("hostname for template repository (default: 'github.com')")
+
     opt[String]('o', "out")
+      .valueName("[path]")
       .action { (out, config) => config.copy(out = Some(out)) }
       .text("output directory")
 
@@ -338,9 +345,10 @@ object App extends Operations { self =>
       .action { (_, config) => config.copy(noGenerate = true) }
       .text("never generate files (`git clone` will be executed anyway)")
 
-    opt[Map[String, String]]("params")
+    opt[Map[String, String]]('p', "params")
       .valueName("key1=value1,key2=value2...")
-      .action { (params, config) => config.copy(params = params) }
+      .unbounded()
+      .action { (more, config) => config.copy(params = config.params ++ more) }
       .text("additional key-value args (prior to defaults)")
 
     // implementations
