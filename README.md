@@ -10,7 +10,7 @@ This is port of great tool [giter8][giter8] for Node.js
 
 ## Installation
 
-Clone this repository and copy files in `dist` folder to where you like.
+Clone this repository and copy files in `bin` folder to where you like.
 
 In windows, `g8js.cmd` is your launcher. For mac/linux `g8js` is the one.
 
