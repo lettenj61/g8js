@@ -202,7 +202,7 @@ trait Operations {
 
       // Process each template file
       if (config.noGenerate) {
-        println("'--no-generate' flag found.")
+        println("'--no-generate' flag found.\n\n")
       } else {
         Operations.this.mkdirs(targetRoot)
       }
@@ -270,10 +270,13 @@ trait Operations {
       }
     }
     object NoGenerate extends FileProcessor {
-      def copy(from: String, to: String): Unit = println(s"Copying (without rendering): $to")
-      def mkdir(path: String): Unit = println(s"Creating directory: $path")
-      def render(src: String, dest: String, ctx: Map[String, String]): Unit =
-        println(s"Rendering template: $src => $dest")
+      def copy(from: String, to: String): Unit = println(s"COPY: $to")
+      def mkdir(path: String): Unit = println(s"MKDIR: $path")
+      def render(src: String, dest: String, ctx: Map[String, String]): Unit = {
+        println("RENDER: ")
+        println(src)
+        println("=> " + dest)
+      }
     }
   }
 
