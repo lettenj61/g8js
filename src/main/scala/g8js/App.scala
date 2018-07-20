@@ -202,8 +202,8 @@ trait Operations {
           .getOrElse(Nil)
 
       // Process each template file
-      if (config.noGenerate) {
-        println("'--no-generate' flag found.\n")
+      if (config.verbose && config.noGenerate) {
+        println("'--no-generate' flag detected\n")
       } else {
         Operations.this.mkdirs(targetRoot)
       }
@@ -275,8 +275,8 @@ trait Operations {
       def mkdir(path: String): Unit = println(s"MKDIR: $path")
       def render(src: String, dest: String, ctx: Map[String, String]): Unit = {
         println("RENDER: ")
-        println(src)
-        println("=> " + dest)
+        println(src + " =>")
+        println(dest)
       }
     }
   }
@@ -339,6 +339,9 @@ trait Operations {
         // Show first prompt
         proceed()
       } else {
+        if (config.verbose && config.yes) {
+          println("'--yes' flag detected\n")
+        }
         // When we don't need to show prompt, just run with defaults
         new Generator(config, props).run()
       }
