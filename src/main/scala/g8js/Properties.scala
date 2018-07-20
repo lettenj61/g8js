@@ -53,7 +53,7 @@ object Properties {
       .filter(s => s != "" && !s.startsWith("#"))
       .map { kv =>
         val (k, v) = kv.span(_ != '=')
-        (k.trim, v.tail)
+        (k.trim, v.tail.dropWhile(c => c == '\t' || c.isSpaceChar))
       }
   )
 }
