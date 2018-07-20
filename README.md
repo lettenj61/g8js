@@ -116,7 +116,7 @@ The template syntax is simulating original `giter8` implementation. ([Original d
 
 ## Highlights
 
-* Not-so-heavy executable (387+ kb minified)
+* Not-so-heavy executable (~400kb minified)
 * No NPM dependency is required
 
 ## Todo

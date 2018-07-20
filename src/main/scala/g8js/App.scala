@@ -61,6 +61,7 @@ trait Operations {
       .reverse
 
     rmdirInner(files)
+    Fs.rmdirSync(base)
   }
 
   def gitClone(config: Config, cloneRoot: String): Try[String] = Try {
