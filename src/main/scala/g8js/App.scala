@@ -19,6 +19,7 @@ case class Config(
   out: Option[String] = None,
   params: Map[String, String] = Map(),
   noGenerate: Boolean = false,
+  verbose: Boolean = false,
   var cachedRoot: String = "",
   var files: Seq[String] = Nil
 )
@@ -46,8 +47,14 @@ trait Operations {
     val cache = Path.normalize(Path.join(cacheDir, s"${config.host}/${config.repo}"))
     if (Fs.existsSync(cache)) cache
     else {
+      val gitCommand = s"git clone $url $cache"
+      if (config.verbose) {
+        println(s"No cache found for template [$url]")
+        println("Attempt to run git with: ")
+        println(s"`$gitCommand`")
+      }
       // This is defined in NodeJSExtensions, not ScalaJS.io facade
-      ChildProcess.execSync(s"git clone $url $cache", new ExecOptions(cwd = cacheDir))
+      ChildProcess.execSync(gitCommand, new ExecOptions(cwd = cacheDir))
       cache
     }
   }
@@ -65,14 +72,25 @@ trait Operations {
     def absolutePaths(base: String): Seq[String] =
       Fs.readdirSync(base).map(f => Path.join(base, f))
 
+    // TODO make it readable
     @tailrec def loop(
       current: String,
       rest: Seq[String],
       collect: Seq[String]
     ): Seq[String] = {
-      if (rest.isEmpty) collect
-      else {
-        if (!Fs.lstatSync(current).isDirectory) {
+      val isDir = Fs.lstatSync(current).isDirectory()
+      if (rest.isEmpty) {
+        if (!isDir) collect :+ current
+        else {
+          absolutePaths(current).toList match {
+            case Nil =>
+              collect :+ current
+            case x :: xs =>
+              loop(x, xs, collect :+ current)
+          }
+        }
+      } else {
+        if (!isDir) {
           loop(rest.head, rest.tail, collect :+ current)
         } else {
           loop(
@@ -120,6 +138,10 @@ trait Operations {
     props = findProps(files)
   } yield (cachedRoot, props, files)) match {
     case Success((cachedRoot, props, files)) =>
+      if (config.verbose) {
+        println(s"Template ${config.host}/${config.repo} includes: ")
+        files.foreach(f => println("  " + f))
+      }
       // Fill params with command line args
       val whitelist = props.mergeAndReport(config.params)
       // Update config with params for current run
@@ -344,6 +366,10 @@ object App extends Operations { self =>
     opt[Unit]('D', "no-generate")
       .action { (_, config) => config.copy(noGenerate = true) }
       .text("never generate files (`git clone` will be executed anyway)")
+
+    opt[Unit]('v', "verbose")
+      .action { (_, config) => config.copy(verbose = true) }
+      .text("verbose output")
 
     opt[Map[String, String]]('p', "params")
       .valueName("key1=value1,key2=value2...")
