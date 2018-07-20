@@ -19,9 +19,11 @@ case class Config(
   out: Option[String] = None,
   props: Map[String, String] = Map(),
   noGenerate: Boolean = false,
+  noCache: Boolean = false,
   verbose: Boolean = false,
   yes: Boolean = false,
-  var cachedRoot: String = "",
+  var cloneRoot: String = "",
+  var workDir: String = "",
   var files: Seq[String] = Nil
 )
 
@@ -42,23 +44,51 @@ trait Operations {
     }
   }
 
-  def gitClone(config: Config, cacheDir: String): Try[String] = Try {
+  def rmdirs(base: String): Unit = {
+    val sepChar = Path.sep.charAt(0)
+    def rmdirInner(files: Seq[String]): Unit = {
+      files.foreach { f =>
+        val stats = Fs.lstatSync(f)
+        if (!stats.isDirectory) {
+          Fs.unlinkSync(f)
+        } else {
+          Fs.rmdirSync(f)
+        }
+      }
+    }
+    val files = listFiles(base)
+      .sortBy(_.count(_ == sepChar))
+      .reverse
+
+    rmdirInner(files)
+  }
+
+  def gitClone(config: Config, cloneRoot: String): Try[String] = Try {
     val Array(user, repo) = config.repo.split("/", 2)
     val url = s"https://${config.host}/$user/$repo"
-    val cache = Path.normalize(Path.join(cacheDir, s"${config.host}/${config.repo}"))
-    if (Fs.existsSync(cache)) cache
+    val target = Path.normalize(Path.join(
+      cloneRoot,
+      if (config.noCache) repo else s"${config.host}/${config.repo}"
+    ))
+
+    if (Fs.existsSync(target)) target
     else {
-      val gitCommand = s"git clone $url $cache"
+      val gitCommand = s"git clone $url $target"
       if (config.verbose) {
-        println(s"No cache found for template [$url]")
+        if (!config.noCache) {
+          println(s"No cache found for template [$url]")
+        }
         println("Attempt to run git with: ")
         println(s"`$gitCommand`")
       }
       // This is defined in NodeJSExtensions, not ScalaJS.io facade
-      ChildProcess.execSync(gitCommand, new ExecOptions(cwd = cacheDir))
-      cache
+      ChildProcess.execSync(gitCommand, new ExecOptions(cwd = cloneRoot))
+      target
     }
   }
+
+  def absolutePaths(base: String): Seq[String] =
+    Fs.readdirSync(base).map(f => Path.join(base, f))
 
   def templateFiles(baseDir: String): Try[(String, Seq[String])] = Try {
     val templateRoot = Path.join(baseDir, "src/main/g8")
@@ -70,9 +100,6 @@ trait Operations {
   }
 
   def listFiles(baseDir: String): Seq[String] = {
-    def absolutePaths(base: String): Seq[String] =
-      Fs.readdirSync(base).map(f => Path.join(base, f))
-
     // TODO make it readable
     @tailrec def loop(
       current: String,
@@ -123,22 +150,27 @@ trait Operations {
     }.getOrElse { Properties.empty }
   }
 
-  lazy val homeDir: String =
+  lazy val appHome: String =
     Path.join(OS.homedir(), "_g8js")
 
-  def setup(): Try[Unit] = Try {
-    if (!Fs.existsSync(homeDir)) {
-      mkdirs(homeDir)
+  def selectWorkDir(config: Config): Try[String] = Try {
+    if (config.noCache) {
+      Fs.mkdtempSync(OS.tmpdir() + "/g8js_")
+    } else {
+      if (!Fs.existsSync(appHome)) {
+        mkdirs(appHome)
+      }
+      appHome
     }
   }
 
   def generate(config: Config): Unit = (for {
-    _ <- setup()
-    cloneDir <- gitClone(config, homeDir)
-    (cachedRoot, files) <- templateFiles(cloneDir)
+    cloneRoot <- selectWorkDir(config)
+    templateDir <- gitClone(config, cloneRoot)
+    (workDir, files) <- templateFiles(templateDir)
     props = findProps(files)
-  } yield (cachedRoot, props, files)) match {
-    case Success((cachedRoot, props, files)) =>
+  } yield (cloneRoot, workDir, props, files)) match {
+    case Success((cloneRoot, workDir, props, files)) =>
       if (config.verbose) {
         println(s"Template ${config.host}/${config.repo} includes: ")
         files.foreach(f => println("  " + f))
@@ -146,7 +178,8 @@ trait Operations {
       // Fill params with command line args
       val whitelist = props.mergeAndReport(config.props)
       // Update config with params for current run
-      config.cachedRoot = cachedRoot
+      config.cloneRoot = cloneRoot
+      config.workDir = workDir
       config.files = files
       new Prompt(config, props, whitelist).start()
     case Failure(err) =>
@@ -181,7 +214,7 @@ trait Operations {
       else Path.join(Path.resolve(), path)
 
     def run(): Unit = {
-      val defaultProps = Path.join(config.cachedRoot, "default.properties")
+      val defaultProps = Path.join(config.workDir, "default.properties")
       val name = props
         .get("name")
         .map(Formatter.normalize(_))
@@ -212,7 +245,7 @@ trait Operations {
       }
       for (file <- config.files if file != defaultProps) {
         val toPath = Template.renderPath(
-          Path.join(targetRoot, file.stripPrefix(config.cachedRoot)),
+          Path.join(targetRoot, file.stripPrefix(config.workDir)),
           ctx
         )
         val fromStats = Fs.lstatSync(file)
@@ -228,6 +261,10 @@ trait Operations {
           ctx
         )
       }
+      if (config.noCache && config.cloneRoot != "")  {
+        Operations.this.rmdirs(config.cloneRoot)
+      }
+      println("")
       println(s"Successfully generated: $targetRoot")
     }
   }
@@ -376,6 +413,10 @@ object App extends Operations { self =>
     opt[Unit]('D', "no-generate")
       .action { (_, config) => config.copy(noGenerate = true) }
       .text("never generate files (`git clone` will be executed anyway)")
+
+    opt[Unit]('n', "no-cache")
+      .action { (_, config) => config.copy(noCache = true) }
+      .text("do not cache template")
 
     opt[Unit]('v', "verbose")
       .action { (_, config) => config.copy(verbose = true) }

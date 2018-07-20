@@ -112,7 +112,7 @@ The template syntax is simulating original `giter8` implementation. ([Original d
 
 * It doesn't have `giter8` feature to resolve library version from Maven Central (maven property).
 * It doesn't support conditionals in template syntax.
-* It only supports templates hosted on GitHub.
+* It doesn't support `g8ignore` and `.gitignore`.
 
 ## Highlights
 
@@ -122,6 +122,8 @@ The template syntax is simulating original `giter8` implementation. ([Original d
 ## Todo
 
 * Clean / update cached template
+* Let user choose use cache or not
+* Specify which branch to pull template
 * Support full URLs, file URIs
 * Support conditional syntax
 
