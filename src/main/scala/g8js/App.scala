@@ -17,9 +17,10 @@ case class Config(
   repo: String = "",
   host: String = "github.com",
   out: Option[String] = None,
-  params: Map[String, String] = Map(),
+  props: Map[String, String] = Map(),
   noGenerate: Boolean = false,
   verbose: Boolean = false,
+  yes: Boolean = false,
   var cachedRoot: String = "",
   var files: Seq[String] = Nil
 )
@@ -143,7 +144,7 @@ trait Operations {
         files.foreach(f => println("  " + f))
       }
       // Fill params with command line args
-      val whitelist = props.mergeAndReport(config.params)
+      val whitelist = props.mergeAndReport(config.props)
       // Update config with params for current run
       config.cachedRoot = cachedRoot
       config.files = files
@@ -202,7 +203,7 @@ trait Operations {
 
       // Process each template file
       if (config.noGenerate) {
-        println("'--no-generate' flag found.\n\n")
+        println("'--no-generate' flag found.\n")
       } else {
         Operations.this.mkdirs(targetRoot)
       }
@@ -298,7 +299,7 @@ trait Operations {
       else None
 
     def start(): Unit = {
-      if (questions.hasNext) {
+      if (!config.yes && questions.hasNext) {
         val rl = Readline.createInterface(new ReadlineOptions(
           input = process.stdin,
           output = process.stdout
@@ -374,10 +375,14 @@ object App extends Operations { self =>
       .action { (_, config) => config.copy(verbose = true) }
       .text("verbose output")
 
-    opt[Map[String, String]]('p', "params")
+    opt[Unit]('y', "yes")
+      .action { (_, config) => config.copy(yes = true) }
+      .text("no prompt and use defaults ('-p' options are respected)")
+
+    opt[Map[String, String]]('p', "props")
       .valueName("key1=value1,key2=value2...")
       .unbounded()
-      .action { (more, config) => config.copy(params = config.params ++ more) }
+      .action { (more, config) => config.copy(props = config.props ++ more) }
       .text("additional key-value args (prior to defaults)")
 
     // implementations
