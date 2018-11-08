@@ -4,8 +4,13 @@ import scala.scalajs.js
 import scala.scalajs.js.annotation.{ JSImport, JSName }
 
 import io.scalajs.nodejs.buffer.Buffer
-import io.scalajs.nodejs.child_process.{ ChildProcess => BaseChildProcess, ExecOptions }
+import io.scalajs.nodejs.child_process.{ ChildProcess => BaseChildProcess }
 import io.scalajs.nodejs.path.{ Path => NodePath }
+
+trait ExecOptions extends js.Object {
+  def stdio: String
+  def cwd: String
+}
 
 @js.native
 trait SyncChildProcess extends BaseChildProcess {

@@ -7,10 +7,8 @@ import scala.scalajs.js
 import scopt.OptionParser
 
 import io.scalajs.nodejs.{ console, process }
-import io.scalajs.nodejs.child_process.ExecOptions
 import io.scalajs.nodejs.fs.{ Fs, Stats }
 import io.scalajs.nodejs.os.OS
-// import io.scalajs.nodejs.path.Path <= `Path` object below comes from `NodeJSExtensions.scala`
 import io.scalajs.nodejs.readline._
 
 case class Config(
@@ -83,7 +81,10 @@ trait Operations {
         println(s"`$gitCommand`")
       }
       // This is defined in NodeJSExtensions, not ScalaJS.io facade
-      ChildProcess.execSync(gitCommand, new ExecOptions(cwd = cloneRoot))
+      ChildProcess.execSync(gitCommand, new ExecOptions {
+        val stdio = "inherit"
+        val cwd = cloneRoot
+      })
       target
     }
   }
@@ -392,9 +393,9 @@ trait Operations {
 
 object App extends Operations { self =>
   val parser: OptionParser[Config] = new OptionParser[Config]("g8js") {
-    head("g8js", "0.0.1")
+    head("g8js", "0.0.2")
 
-    help("help").text("show this help message")
+    help("help").abbr("h")text("show this help message")
 
     arg[String]("<template>")
       .required()

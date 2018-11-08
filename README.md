@@ -19,15 +19,16 @@ In windows, `g8js.cmd` is your launcher. For mac/linux `g8js` is the one.
 ## Usage
 
 ```
-$ g8js --help
-g8js 0.0.1
+$ g8js -h
+g8js 0.0.2
 Usage: g8js [options] <template>
 
-  --help                   show this help message
+  -h, --help               show this help message
   <template>               github user/repo
   -H, --host [hostname]    hostname for template repository (default: 'github.com')
   -o, --out [path]         output directory
   -D, --no-generate        never generate files (`git clone` will be executed anyway)
+  -n, --no-cache           do not cache template
   -v, --verbose            verbose output
   -y, --yes                no prompt and use defaults ('-p' options are respected)
   -p, --props key1=value1,key2=value2...
@@ -122,7 +123,6 @@ The template syntax is simulating original `giter8` implementation. ([Original d
 ## Todo
 
 * Clean / update cached template
-* Let user choose use cache or not
 * Specify which branch to pull template
 * Support full URLs, file URIs
 * Support conditional syntax

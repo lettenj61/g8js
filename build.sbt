@@ -1,5 +1,5 @@
-val scalaV = "2.12.4"
-val libV = "0.0.1"
+val scalaV = "2.12.7"
+val libV = "0.0.2"
 
 lazy val sharedSettings = Seq(
   organization := "com.github.lettenj61",
@@ -39,7 +39,7 @@ lazy val g8js = project
   .settings(
     name := "g8js",
     libraryDependencies ++= Seq(
-      "com.lihaoyi"       %%% "utest"   % "0.6.3" % "test",
+      "com.lihaoyi"       %%% "utest"   % "0.6.5" % "test",
       "com.github.scopt"  %%% "scopt"   % "3.7.0",
       "io.scalajs"        %%% "nodejs"  % "0.4.2"
     ),
