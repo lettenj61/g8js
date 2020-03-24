@@ -6,7 +6,8 @@ import scala.scalajs.js
 
 import scopt.OptionParser
 
-import io.scalajs.nodejs.{ console, process }
+import io.scalajs.nodejs.console_module.{ Console => console }
+import io.scalajs.nodejs.process.Process
 import io.scalajs.nodejs.fs.{ Fs, Stats }
 import io.scalajs.nodejs.os.OS
 import io.scalajs.nodejs.readline._
@@ -89,7 +90,7 @@ trait Operations {
     }
   }
 
-  def absolutePaths(base: String): Seq[String] =
+  def absolutePaths(base: String): js.Array[String] =
     Fs.readdirSync(base).map(f => Path.join(base, f))
 
   def templateFiles(baseDir: String): Try[(String, Seq[String])] = Try {
@@ -132,7 +133,7 @@ trait Operations {
       }
     }
 
-    val children = absolutePaths(baseDir)
+    val children = absolutePaths(baseDir).toIndexedSeq
     loop(children.head, children.tail, Nil)
   }
 
@@ -228,12 +229,12 @@ trait Operations {
         }
       val targetRoot = config.out
         .map(normalizePath)
-        .getOrElse { Path.join(process.cwd(), name) }
+        .getOrElse { Path.join(Process.cwd(), name) }
 
       // Finally we can resolve variables in props
       props.resolve()
 
-      val ctx = props.keyValues.toMap.filterKeys(_ != "verbatim")
+        val ctx = props.keyValues.filter { case (key, _) => key != "verbatim" }.toMap
       val pathFilters: Seq[PathFilter] =
         props.get("verbatim")
           .map(e => e.split(" ").map(new PathFilter(_)).toSeq)
@@ -274,7 +275,7 @@ trait Operations {
   abstract class FileProcessor {
     def copy(from: String, to: String): Unit
     def mkdir(path: String): Unit
-    def render(src: String, dest: String, ctx: Map[String, String])
+    def render(src: String, dest: String, ctx: Map[String, String]): Unit
     def error(from: String, to: String): Unit =
       println(s"Cannot process '$from' to '$to', as it is neither directory nor file")
 
@@ -343,8 +344,8 @@ trait Operations {
     def start(): Unit = {
       if (!config.yes && questions.hasNext) {
         val rl = Readline.createInterface(new ReadlineOptions(
-          input = process.stdin,
-          output = process.stdout
+          input = Process.stdin,
+          output = Process.stdout
         ))
 
         var current = prompt.next() // FIXME: Remove mutable state
@@ -393,7 +394,7 @@ trait Operations {
 
 object App extends Operations { self =>
   val parser: OptionParser[Config] = new OptionParser[Config]("g8js") {
-    head("g8js", "0.0.2")
+    head("g8js", "0.0.3")
 
     help("help").abbr("h")text("show this help message")
 
@@ -436,12 +437,12 @@ object App extends Operations { self =>
 
     // implementations
     override def terminate(exitState: Either[String, Unit]): Unit = {
-      process.exit(0)
+      Process.exit(0)
     }
   }
 
   def main(args: Array[String]): Unit = {
-    parser.parse(process.argv.drop(2), Config()) match {
+    parser.parse(Process.argv.drop(2), Config()) match {
       case Some(config) => generate(config)
       case None =>
     }

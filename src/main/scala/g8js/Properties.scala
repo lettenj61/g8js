@@ -23,7 +23,7 @@ case class Properties(keyValues: js.Array[Pair]) {
     // Update props with params
     params.foreach { case (k, v) => set(k, v) }
     // Report back what else need to fill
-    keyValues.map(_._1) diff params.keys.toSeq
+    keyValues.map(_._1).toSeq diff params.keys.toSeq
   }
 
   def resolve(): this.type = {

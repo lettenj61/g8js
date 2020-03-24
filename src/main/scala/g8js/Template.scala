@@ -1,14 +1,12 @@
 package g8js
 
-import scala.scalajs.js
-
 /**
  * Original implementation from:
  * https://github.com/foundweekends/giter8/blob/fb16c1c2587ab88832a7c00af1238153c6f265c3/library/src/main/scala/g8.scala
  */
 object Formatter {
 
-  def decapitalize(s: String) = if (s.isEmpty) s else s(0).toLower + s.substring(1)
+  def decapitalize(s: String) = if (s.isEmpty) s else s(0).toLower.toString + s.substring(1)
   def startCase(s: String) = s.toLowerCase.split(" ").map(_.capitalize).mkString(" ")
   def wordOnly(s: String) = s.replaceAll("\\W", "")
   def upperCamel(s: String) = wordOnly(startCase(s))
@@ -57,7 +55,7 @@ object Template {
     render(expandPathPattern(path), context)
 
   def render(body: String, context: Context): String = {
-    val out = StringBuilder.newBuilder
+    val out = new StringBuilder
     var input = body
 
     while (input != "") {
