@@ -64,6 +64,9 @@ object Template {
 
       Varname.findFirstMatchIn(rest) match {
         case None =>
+          if (rest startsWith "$$") {
+            out += '$'
+          }
           input = if (rest == "") "" else rest.tail
         case Some(m) => {
           val varname = m.group(1)
