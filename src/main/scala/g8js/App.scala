@@ -1,42 +1,42 @@
 package g8js
 
 import scala.annotation.tailrec
-import scala.util.{ Try, Success, Failure }
+import scala.util.{Failure, Success, Try}
 import scala.scalajs.js
 
 import scopt.OptionParser
 
-import io.scalajs.nodejs.console_module.{ Console => console }
+import io.scalajs.nodejs.child_process.{ChildProcess, ExecOptions}
+import io.scalajs.nodejs.console_module.{Console => console}
 import io.scalajs.nodejs.process.Process
-import io.scalajs.nodejs.fs.{ Fs, Stats }
+import io.scalajs.nodejs.fs.{Fs, Stats}
 import io.scalajs.nodejs.os.OS
 import io.scalajs.nodejs.readline._
 
 case class Config(
-  repo: String = "",
-  host: String = "github.com",
-  out: Option[String] = None,
-  props: Map[String, String] = Map(),
-  noGenerate: Boolean = false,
-  noCache: Boolean = false,
-  verbose: Boolean = false,
-  yes: Boolean = false,
-  var cloneRoot: String = "",
-  var workDir: String = "",
-  var files: Seq[String] = Nil
-)
+    repo: String = "",
+    host: String = "github.com",
+    out: Option[String] = None,
+    props: Map[String, String] = Map(),
+    noGenerate: Boolean = false,
+    noCache: Boolean = false,
+    verbose: Boolean = false,
+    yes: Boolean = false,
+    var cloneRoot: String = "",
+    var workDir: String = "",
+    var files: Seq[String] = Nil)
 
 trait Operations {
   def mkdirs(pathname: String): Unit = {
-    var entry = pathname
-    val root = Path.parseSafe(Path.resolve()).root
+    var entry                  = pathname
+    val root                   = Path.parseSafe(Path.resolve()).root
     val dirs: js.Array[String] = js.Array()
     while (entry != "" && root != entry) {
       dirs.push(entry)
       entry = Path.dirname(entry)
     }
     while (dirs.length > 0) {
-      val dir = dirs.pop
+      val dir = dirs.pop()
       if (!Fs.existsSync(dir)) {
         Fs.mkdirSync(dir)
       }
@@ -48,7 +48,7 @@ trait Operations {
     def rmdirInner(files: Seq[String]): Unit = {
       files.foreach { f =>
         val stats = Fs.lstatSync(f)
-        if (!stats.isDirectory) {
+        if (!stats.isDirectory()) {
           Fs.unlinkSync(f)
         } else {
           Fs.rmdirSync(f)
@@ -65,11 +65,13 @@ trait Operations {
 
   def gitClone(config: Config, cloneRoot: String): Try[String] = Try {
     val Array(user, repo) = config.repo.split("/", 2)
-    val url = s"https://${config.host}/$user/$repo"
-    val target = Path.normalize(Path.join(
-      cloneRoot,
-      if (config.noCache) repo else s"${config.host}/${config.repo}"
-    ))
+    val url               = s"https://${config.host}/$user/$repo"
+    val target = Path.normalize(
+      Path.join(
+        cloneRoot,
+        if (config.noCache) repo else s"${config.host}/${config.repo}"
+      )
+    )
 
     if (Fs.existsSync(target)) target
     else {
@@ -81,10 +83,11 @@ trait Operations {
         println("Attempt to run git with: ")
         println(s"`$gitCommand`")
       }
-      // This is defined in NodeJSExtensions, not ScalaJS.io facade
       ChildProcess.execSync(gitCommand, new ExecOptions {
-        val stdio = "inherit"
-        val cwd = cloneRoot
+        // overrides
+        cwd = cloneRoot
+        // extra fields
+        val stdio: String = "inherit"
       })
       target
     }
@@ -104,11 +107,7 @@ trait Operations {
 
   def listFiles(baseDir: String): Seq[String] = {
     // TODO make it readable
-    @tailrec def loop(
-      current: String,
-      rest: Seq[String],
-      collect: Seq[String]
-    ): Seq[String] = {
+    @tailrec def loop(current: String, rest: Seq[String], collect: Seq[String]): Seq[String] = {
       val isDir = Fs.lstatSync(current).isDirectory()
       if (rest.isEmpty) {
         if (!isDir) collect :+ current
@@ -138,19 +137,20 @@ trait Operations {
   }
 
   def findProps(paths: Seq[String]): Properties = {
-    paths.find(
-      p => Path.parseSafe(p).base == "default.properties"
-    ).flatMap { path =>
-      Try {
-        val content = Fs.readFileSync(path, "utf8")
-        Properties.parse(content)
-      } match {
-        case Success(props) => Some(props)
-        case Failure(err) =>
-          console.warn(s"Failed to parse properties: ${err}")
-          Some(Properties.empty)
+    paths
+      .find(p => Path.parseSafe(p).base == "default.properties")
+      .flatMap { path =>
+        Try {
+          val content = Fs.readFileSync(path, "utf8")
+          Properties.parse(content)
+        } match {
+          case Success(props) => Some(props)
+          case Failure(err) =>
+            console.warn(s"Failed to parse properties: ${err}")
+            Some(Properties.empty())
+        }
       }
-    }.getOrElse { Properties.empty }
+      .getOrElse { Properties.empty() }
   }
 
   lazy val appHome: String =
@@ -167,37 +167,39 @@ trait Operations {
     }
   }
 
-  def generate(config: Config): Unit = (for {
-    cloneRoot <- selectWorkDir(config)
-    templateDir <- gitClone(config, cloneRoot)
-    (workDir, files) <- templateFiles(templateDir)
-    props = findProps(files)
-  } yield (cloneRoot, workDir, props, files)) match {
-    case Success((cloneRoot, workDir, props, files)) =>
-      if (config.verbose) {
-        println(s"Template ${config.host}/${config.repo} includes: ")
-        files.foreach(f => println("  " + f))
-      }
-      // Fill params with command line args
-      val whitelist = props.mergeAndReport(config.props)
-      // Update config with params for current run
-      config.cloneRoot = cloneRoot
-      config.workDir = workDir
-      config.files = files
-      new Prompt(config, props, whitelist).start()
-    case Failure(err) =>
-      throw js.JavaScriptException(err)
-  }
+  def generate(config: Config): Unit =
+    (for {
+      cloneRoot        <- selectWorkDir(config)
+      templateDir      <- gitClone(config, cloneRoot)
+      (workDir, files) <- templateFiles(templateDir)
+      props            = findProps(files)
+    } yield (cloneRoot, workDir, props, files)) match {
+      case Success((cloneRoot, workDir, props, files)) =>
+        if (config.verbose) {
+          println(s"Template ${config.host}/${config.repo} includes: ")
+          files.foreach(f => println("  " + f))
+        }
+        // Fill params with command line args
+        val whitelist = props.mergeAndReport(config.props)
+        // Update config with params for current run
+        config.cloneRoot = cloneRoot
+        config.workDir = workDir
+        config.files = files
+        new Prompt(config, props, whitelist).start()
+      case Failure(err) =>
+        throw js.JavaScriptException(err)
+    }
 
   /**
-   * Filter function used to exclude files specified by 'verbatim' option.
-   */
+    * Filter function used to exclude files specified by 'verbatim' option.
+    */
   class PathFilter(val pattern: String) extends (String => Boolean) {
+
     /**
-     * Returns `true` when given path matches pattern
-     */
+      * Returns `true` when given path matches pattern
+      */
     def apply(path: String): Boolean = {
-      val checkPath = Path.parseSafe(path)
+      val checkPath   = Path.parseSafe(path)
       val patternPath = Path.parseSafe(pattern)
       patternPath.name match {
         case "*" =>
@@ -234,9 +236,10 @@ trait Operations {
       // Finally we can resolve variables in props
       props.resolve()
 
-        val ctx = props.keyValues.filter { case (key, _) => key != "verbatim" }.toMap
+      val ctx = props.keyValues.filter { case (key, _) => key != "verbatim" }.toMap
       val pathFilters: Seq[PathFilter] =
-        props.get("verbatim")
+        props
+          .get("verbatim")
           .map(e => e.split(" ").map(new PathFilter(_)).toSeq)
           .getOrElse(Nil)
 
@@ -264,7 +267,7 @@ trait Operations {
           ctx
         )
       }
-      if (config.noCache && config.cloneRoot != "")  {
+      if (config.noCache && config.cloneRoot != "") {
         Operations.this.rmdirs(config.cloneRoot)
       }
       println("")
@@ -280,13 +283,13 @@ trait Operations {
       println(s"Cannot process '$from' to '$to', as it is neither directory nor file")
 
     def run(
-      stats: Stats,
-      from: String,
-      to: String,
-      pathFilters: Seq[PathFilter],
-      ctx: Map[String, String]
-    ): Unit = {
-      if (stats.isDirectory) {
+        stats: Stats,
+        from: String,
+        to: String,
+        pathFilters: Seq[PathFilter],
+        ctx: Map[String, String]
+      ): Unit = {
+      if (stats.isDirectory()) {
         mkdir(to)
       } else if (stats.isFile()) {
         if (pathFilters.exists(matcher => matcher(to))) {
@@ -315,7 +318,7 @@ trait Operations {
     }
     object NoGenerate extends FileProcessor {
       def copy(from: String, to: String): Unit = println(s"COPY: $to")
-      def mkdir(path: String): Unit = println(s"MKDIR: $path")
+      def mkdir(path: String): Unit            = println(s"MKDIR: $path")
       def render(src: String, dest: String, ctx: Map[String, String]): Unit = {
         println("RENDER: ")
         println(src + " =>")
@@ -324,17 +327,11 @@ trait Operations {
     }
   }
 
-  class Prompt(
-    config: Config,
-    props: Properties,
-    whitelist: Seq[String]
-  ) {
+  class Prompt(config: Config, props: Properties, whitelist: Seq[String]) {
     prompt =>
 
     val questions: Iterator[(String, String)] =
-      props
-        .keyValues
-        .iterator
+      props.keyValues.iterator
         .filter(kv => whitelist.contains(kv._1))
 
     private def next(): Option[(String, String)] =
@@ -343,10 +340,12 @@ trait Operations {
 
     def start(): Unit = {
       if (!config.yes && questions.hasNext) {
-        val rl = Readline.createInterface(new ReadlineOptions(
-          input = Process.stdin,
-          output = Process.stdout
-        ))
+        val rl = Readline.createInterface(
+          ReadlineOptions(
+            input = Process.stdin,
+            output = Process.stdout
+          )
+        )
 
         var current = prompt.next() // FIXME: Remove mutable state
 
@@ -361,20 +360,23 @@ trait Operations {
         }
 
         // Complete props with user input
-        rl.on("line", (input: String) => {
-          current match {
-            case Some((k, _)) =>
-              val trimmed = input.trim
-              if (trimmed != "") {
-                prompt.props.set(k, trimmed)
-              }
-              // Move to next question
-              current = prompt.next()
-              proceed()
-            case None =>
-              rl.close() // FIXME: remove duplicated code
+        rl.on(
+          "line",
+          (input: String) => {
+            current match {
+              case Some((k, _)) =>
+                val trimmed = input.trim
+                if (trimmed != "") {
+                  prompt.props.set(k, trimmed)
+                }
+                // Move to next question
+                current = prompt.next()
+                proceed()
+              case None =>
+                rl.close() // FIXME: remove duplicated code
+            }
           }
-        })
+        )
         // On finish, call generator
         rl.on("close", () => {
           new Generator(config, props).run()
@@ -396,7 +398,7 @@ object App extends Operations { self =>
   val parser: OptionParser[Config] = new OptionParser[Config]("g8js") {
     head("g8js", "0.0.3")
 
-    help("help").abbr("h")text("show this help message")
+    help("help").abbr("h") text ("show this help message")
 
     arg[String]("<template>")
       .required()
@@ -444,7 +446,7 @@ object App extends Operations { self =>
   def main(args: Array[String]): Unit = {
     parser.parse(Process.argv.drop(2), Config()) match {
       case Some(config) => generate(config)
-      case None =>
+      case None         =>
     }
   }
 }
