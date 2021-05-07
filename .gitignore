@@ -76,4 +76,6 @@ project/plugins/project/
 .cache
 .lib/
 
-
+.vscode/
+.bsp/
+.metals/

@@ -1,29 +1,12 @@
 package g8js
 
 import scala.scalajs.js
-import scala.scalajs.js.annotation.{ JSImport, JSName }
-
-import io.scalajs.nodejs.buffer.Buffer
-import io.scalajs.nodejs.child_process.{ ChildProcess => BaseChildProcess }
-import io.scalajs.nodejs.path.{ Path => NodePath }
-
-trait ExecOptions extends js.Object {
-  def stdio: String
-  def cwd: String
-}
-
-@js.native
-trait SyncChildProcess extends BaseChildProcess {
-  def execSync(command: String, options: ExecOptions): Buffer = js.native
-}
-
-@js.native
-@JSImport("child_process", JSImport.Namespace)
-object ChildProcess extends SyncChildProcess
+import scala.scalajs.js.annotation.{JSImport, JSName}
+import io.scalajs.nodejs.path.{Path => NodePath}
 
 /**
- * Object returned from `path.parse` API.
- */
+  * Object returned from `path.parse` API.
+  */
 @js.native
 trait PathObject extends js.Object {
   def root: String
