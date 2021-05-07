@@ -396,7 +396,7 @@ trait Operations {
 
 object App extends Operations { self =>
   val parser: OptionParser[Config] = new OptionParser[Config]("g8js") {
-    head("g8js", "0.0.3")
+    head("g8js", "0.0.4")
 
     help("help").abbr("h") text ("show this help message")
 
