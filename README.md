@@ -5,8 +5,8 @@ This is port of great tool [giter8][giter8] for Node.js
 
 ## Prerequisite
 
-* Node.js (version 8+)
-* Git (You need to invoke `git` command from your terminal)
+* Node.js (version 12+)
+* Git (the `git` command must be available in your terminal)
 
 ## Installation
 
@@ -20,7 +20,7 @@ In windows, `g8js.cmd` is your launcher. For mac/linux `g8js` is the one.
 
 ```
 $ g8js -h
-g8js 0.0.2
+g8js 0.0.4
 Usage: g8js [options] <template>
 
   -h, --help               show this help message
@@ -72,13 +72,13 @@ Successfully generated: C:\dev\scala\github\g8js\scala-seed-project
 
 ### Specifying properties
 
-Properties used to render template is collected in some ways.
+Properties to fill templates are collected in some ways.
 
-By default `g8js` asks you to input values for each variables defined in that template via prompt.
+By default, `g8js` prompts you for each variables defined in the template.
 
-Alternatively you can pass values with command line option `--props, -p`. This form is prior to anything so `g8js` would never show prompt with the property key specified in `-p` options.
+Alternatively you can pass values with `--props, -p` option. This form takes the first precedence so `g8js` would never prompt you with the property key specified with `-p` options.
 
-You can specify property values in syntax like `-p name=CoolProject,organization=foobar.com`, and `-p` option can occur many times.
+The syntax is like `-p name=CoolProject,organization=foobar.com`, and `-p` option can occur many times.
 
 For example, given options below:
 
@@ -97,21 +97,21 @@ val props = Map(
 )
 ```
 
-When there is no value from cli option, and you skip prompt by pressing `Enter` with blank input, values defined in templates' `default.properties` will be used.
+When no `-p` options are provided, and you skip prompt by pressing <kbd>Enter</kbd> with blank input, `g8js` look for values in the templates' `default.properties`.
 
-Lastly you can tell `g8js` to skip all prompts and use default values by giving `-y, --yes` flag. Note that even if you use `-y`, the `-p` options will be respected, and prior to templates' defaults.
+Lastly you can tell `g8js` to skip all prompts and force default values by giving `-y, --yes` flag. Note that even if you use `-y`, the `-p` options will be respected, and takes precedence over `default.properties`.
 
-## Functions
+## Functionality
 
-`g8js` runs `git clone` on specified repository, then process their contents as template and render it to output location.
+`g8js` runs `git clone` on the repository you give, then process their contents as template, render it to output location.
 
 The template syntax is simulating original `giter8` implementation. ([Original documentation][g8docs])
 
-`g8js` will cache templates in local directory, grouping by hostname, which defaults to `~/_g8js` (in windows, `%USERPROFILE%\_g8js`). For example `lettenj61/scala-seed.g8` with `--host github.com` will cached under `~/_g8js/github.com/lettenj61/scala-seed.g8`.
+`g8js` will cache templates in local directory, grouping by hostname and user name. The root of cache directory is defaults to `~/_g8js` (in windows, `%USERPROFILE%\_g8js`). For example `lettenj61/scala-seed.g8` with `--host github.com` will be saved in path `~/_g8js/github.com/lettenj61/scala-seed.g8`.
 
 ## Limitations
 
-* It doesn't have `giter8` feature to resolve library version from Maven Central (maven property).
+* It doesn't have `giter8` feature to resolve library version from Maven Central (_maven property_).
 * It doesn't support conditionals in template syntax.
 * It doesn't support `g8ignore` and `.gitignore`.
 
@@ -123,9 +123,9 @@ The template syntax is simulating original `giter8` implementation. ([Original d
 ## Todo
 
 * Clean / update cached template
-* Specify which branch to pull template
+* Specify branch to pull template from
 * Support full URLs, file URIs
-* Support conditional syntax
+* Support conditional syntax (priority: **LOW**)
 
 ## License
 
